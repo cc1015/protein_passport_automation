@@ -1,13 +1,12 @@
 import requests, sys
 from client.base_client import BaseClient
 
-class UniProtSearchClient(BaseClient):
-    BASE_URL = "https://rest.uniprot.org/uniprotkb/search"
+class UniProtKBClient(BaseClient):
+    BASE_URL = "https://rest.uniprot.org/uniprotkb"
 
-    # returns UniProt search results for given protein name and organism
+    # returns UniProt data for give accession
     def fetch(self, protein_id, **kwargs):
         params = {
-                "query": f"{protein_id} AND organism_name:{kwargs.get('organism')}",
                 "fields": [
                     "accession",
                     "protein_name",
@@ -18,14 +17,13 @@ class UniProtSearchClient(BaseClient):
                     "xref_pdb",
                     "cc_function",
                     "cc_tissue_specificity",
-                    "xref_string"],
-                "size": "25"
+                    "xref_string"]
                     }
         headers = {
                 "accept": "application/json"
                 }
         
-        r = requests.get(self.BASE_URL, headers=headers, params=params)
+        r = requests.get('/'.join([self.BASE_URL, protein_id]), headers=headers, params=params)
 
         if not r.ok:
             r.raise_for_status()

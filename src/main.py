@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from client.uniprot_search_client import UniProtSearchClient
+from client.uniprot_kb_client import UniProtKBClient
 from client.uniprot_client import UniProtClient
 from client.alphafold_client import AlphaFoldClient
 from client.string_client import StringClient
@@ -12,7 +12,7 @@ from models.entry import Entry
 from models.image import Img
 
 def _uniprot_search(protein_name) -> dict:
-    uniprot_search_client = UniProtSearchClient()
+    uniprot_search_client = UniProtKBClient()
 
     uniprot_search_results = {}
     
