@@ -57,7 +57,7 @@ class Entry:
                 f"{self.human.passport_table_data['length']} aa {self.human.passport_table_data['mass']} kDa",
                 'self.human.nature_info'
             ],
-            [f"{o.organism.value[0]}: {o.ecd_similarity}" for o in self.orthologs if o.ecd_similarity is not None],
+            [f"{o.organism.value[0]}: {o.similarity}" for o in self.orthologs if o.similarity is not None],
             [
                 f"Experimental PDBs: {', '.join(self.human.passport_table_data['exp_pdbs'])}",
                 f"Predicted: {self.human.pred_pdb_id}"
@@ -174,7 +174,7 @@ class Entry:
                 id_cell.text_frame.paragraphs[0].runs[0].font.size = Pt(14)
 
                 similarity_cell = table.cell(i, 2)
-                similarity_cell.text = str(ortholog.ecd_similarity) + "%"
+                similarity_cell.text = str(ortholog.similarity) + "%"
                 similarity_cell.text_frame.paragraphs[0].runs[0].font.size = Pt(14)
 
         self.powerpoint.save(self.output_path)

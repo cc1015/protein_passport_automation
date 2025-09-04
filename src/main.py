@@ -139,7 +139,7 @@ def main():
     top_two = sorted(rmsd_map.items(), key=lambda x: x[1][1])[:2]
     slide_3_imgs = []
     for ortholog, (img_path, rmsd) in top_two:
-        slide_3_imgs.append(Img(img_path, caption="Human:" + ortholog.organism.name.capitalize() + "\nRMSD: " + str(rmsd)))
+        slide_3_imgs.append(Img(img_path, caption="Human:" + ortholog.organism.name.capitalize() + "\nRMSD: " + str(rmsd) + "Å"))
     
     slide_4_img = _get_string_db_interactions(human.string_id)
 

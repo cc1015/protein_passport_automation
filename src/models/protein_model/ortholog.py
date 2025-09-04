@@ -17,8 +17,8 @@ class Ortholog(Protein):
         pred_pdb (str): Path to predicted structure PDB.
         pred_pdb_id (str): AlphaFold ID.
         structure_file (str): Path to PDB file.
-        ecd_similarity (float): ECD % similarity to human protein.
-        ecd_rmsd (float): RMSD of ECD against human protein.
+        similarity (float): % similarity to human protein.
+        rmsd (float): RMSD of against human protein.
     """
 
     def __init__(self, id: str, organism: Organism, name: str, seq: str, annotations: str, pred_pdb: str, 
@@ -38,22 +38,22 @@ class Ortholog(Protein):
         """
         super().__init__(id=id, organism=organism, name=name, seq=seq, annotations=annotations, pred_pdb=pred_pdb, 
                          pred_pdb_content=pred_pdb_content, string_id=string_id)
-        self.ecd_similarity = None
+        self.similarity = None
     
-    def set_similarity(self, ecd_similarity: float):
+    def set_similarity(self, similarity: float):
         '''
-        Sets ecd_similarity field.
+        Sets similarity field.
 
         Args:
-            ecd_similarity (float): the similarity value to set to.
+            similarity (float): the similarity value to set to.
         '''
-        self.ecd_similarity = ecd_similarity
+        self.similarity = similarity
     
-    def set_ecd_rmsd(self, ecd_rmsd: float):
+    def set_rmsd(self, rmsd: float):
         '''
-        Sets ecd_rmsd field.
+        Sets rmsd field.
 
         Args:
-            ecd_rmsd (float): the RMSD value to set to.
+            rmsd (float): the RMSD value to set to.
         '''
-        self.ecd_rmsd = ecd_rmsd
+        self.rmsd = rmsd

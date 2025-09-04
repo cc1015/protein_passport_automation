@@ -79,7 +79,8 @@ class Protein(ABC):
     
     def structure_align(self, mobile_proteins) -> dict:
         """
-        Aligns 3d structure of given proteins' ECDs against this Protein's ECD.
+        Aligns 3d structure of given protein against this Protein. Prioritizes aligning domains of interest with corresponding annotations. 
+        If none exist, aligns according to this Protein's annotations.
 
         Args:
             mobile_proteins (list): the mobile proteins to align.
@@ -99,8 +100,8 @@ class Protein(ABC):
             mobile = mobile_protein.organism.name
             cmd.load(mobile_path, mobile)
 
-            if ((mp_ecd := mobile_protein.annotations.get('CHAIN')) 
-                and len(mp_ecd) == 1):
+            if ((mp_domain := mobile_protein.annotations.get('CHAIN')) 
+                and len(mp_domain) == 1):
                 (mobile_start, mobile_end) = mobile_protein.annotations.get('CHAIN')[0]
                 (target_start, target_end) = self.annotations.get('CHAIN')[0]
             else:
@@ -116,7 +117,7 @@ class Protein(ABC):
             target = f"{target}_chain"
         
             result = cmd.align(f"polymer and name CA and {mobile}", f"polymer and name CA and {target}")
-            mobile_protein.set_ecd_rmsd(round(result[0], 2))
+            mobile_protein.set_rmsd(round(result[0], 2))
 
             cmd.disable("all")
             cmd.enable(mobile)
@@ -195,7 +196,7 @@ class Protein(ABC):
         '''
         pdb_path = self.file_name / pdb_name
         pdb_path.write_bytes(pdb_content)
-        self.pred_pdb_id = pdb_name
+        self.pred_pdb_id = pdb_name[:-4]
         self.pred_pdb = str(pdb_path)
 
     

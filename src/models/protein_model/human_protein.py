@@ -66,13 +66,13 @@ class HumanProtein(Protein):
         Args:
             proteins (list): Proteins to be annotated and aligned against this HumanProtein.
         """
-        seq_output_file = self.file_name / "output.geneious"
-        align_output_file = self.file_name / "alignment.geneious"
+        seq_output_file = self.file_name.parent / "annotated_seq_human.geneious"
+        align_output_file = self.file_name.parent / "alignment.geneious"
 
         annotate_command = ["geneious", "-i", self.seq, self.annotations_path, "-o", str(seq_output_file)]
         subprocess.run(annotate_command, capture_output=True, text=True)
 
-        protein_seq_paths = [p.file_name / f"{p.id}_seq.txt" for p in proteins]
+        protein_seq_paths = [p.file_name / f"{p.organism.name}_{p.id}_seq.txt" for p in proteins]
 
         align_command = ["geneious", "-i", str(seq_output_file), 
                          *map(str, protein_seq_paths), "-o", str(align_output_file),
