@@ -29,8 +29,9 @@ def _uniprot_input(protein_name, protein_id) -> dict:
             r = uniprot_client.fetch(protein_id=match_id, kb=True)
             if r.get('results') and (match in uniprot_data):
                 uniprot_data[match] = r['results'][0]
+                orthologs.remove(match)
     
-    for organism in Organism:
+    for organism in orthologs:
         r = uniprot_client.fetch(protein_id=protein_name, organism=organism.value[1], kb=True, search=True)
         if r['results'] and uniprot_data[organism] == None:
             uniprot_data[organism] = r['results'][0]
@@ -66,7 +67,7 @@ def _create_proteins(protein_name, protein_id) -> dict[Organism, Protein]:
                 aliases=[item["fullName"]["value"] for item in results['proteinDescription']['alternativeNames']]
                 length=results['sequence']['length']
                 mass=round(results['sequence']['molWeight'] * 10**-3, 1)
-                target_type=results['comments'][1]['subcellularLocations'][0]['topology']['value']
+                target_type="NA"#results['comments'][1]['subcellularLocations'][0]['topology']['value']
                 exp_pdbs=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "PDB"]
                 known_activity=results['comments'][0]['texts'][0]['value']
                 exp_pattern=results['comments'][2]['texts'][0]['value']

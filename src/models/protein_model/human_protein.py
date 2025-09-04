@@ -74,7 +74,7 @@ class HumanProtein(Protein):
         protein_seq_paths = [p.file_name / f"{p.id}_seq.txt" for p in proteins]
 
         align_command = ["geneious", "-i", str(output_file), 
-                         *map(str, protein_seq_paths), "-o", str(output_file),
+                         *map(str, protein_seq_paths), "-o", "alignment.geneious",
                          "--operation", "muscle_alignment"]
         subprocess.run(align_command, capture_output=True, text=True)
 

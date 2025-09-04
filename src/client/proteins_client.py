@@ -20,7 +20,7 @@ class ProteinsClient(BaseClient):
         Returns:
             str: Annotations.
         """
-        url = f"{self.BASE_URL}/features/{protein_id}?categories=TOPOLOGY"
+        url = f"{self.BASE_URL}/features/{protein_id}?categories=MOLECULE_PROCESSING"
         headers = { "Accept" : "text/x-gff"}
 
         r = requests.get(url, headers=headers)

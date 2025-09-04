@@ -42,7 +42,7 @@ class Protein(ABC):
         self.string_id = string_id
 
         project_root = Path(__file__).parent.parent.parent.parent
-        self.file_name = project_root / "output" / f"{self.organism.value[0].replace(' ', '_')}_{self.name}"
+        self.file_name = project_root / "output" / f"{self.organism.name.lower()}_{self.name}"
         self.file_name.mkdir(parents=True, exist_ok=True)
 
         self._set_save_seq(seq)
@@ -60,9 +60,9 @@ class Protein(ABC):
 
         for annotation, regions in self.annotations.items():
             for start, end in regions:
-                if annotation == "ECD":
+                if annotation == "ECD" or annotation == "CHAIN":
                     color = "green"
-                elif annotation == "TM":
+                elif annotation == "TM" or annotation == "SIGNAL":
                     color = "red"
                 elif annotation == "Cyto":
                     color = "magenta"
@@ -95,25 +95,25 @@ class Protein(ABC):
         rmsd_dict = {}
 
         for mobile_protein in mobile_proteins:
-            if ((mp_ecd := mobile_protein.annotations.get('ECD')) 
+            if ((mp_ecd := mobile_protein.annotations.get('CHAIN')) 
                 and len(mp_ecd) == 1
-                and (self_ecd := self.annotations.get('ECD')) 
+                and (self_ecd := self.annotations.get('CHAIN')) 
                 and len(self_ecd) == 1):
                 mobile_path = mobile_protein.pred_pdb
                 mobile = mobile_protein.organism.name
                 cmd.load(mobile_path, mobile)
 
-                (mobile_start, mobile_end) = mobile_protein.annotations.get('ECD')[0]
-                (target_start, target_end) = self.annotations.get('ECD')[0]
+                (mobile_start, mobile_end) = mobile_protein.annotations.get('CHAIN')[0]
+                (target_start, target_end) = self.annotations.get('CHAIN')[0]
 
                 cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
-                cmd.create(f"{mobile}_ecd", f"{mobile}_sele")
+                cmd.create(f"{mobile}_chain", f"{mobile}_sele")
 
                 cmd.select(f"{target}_sele", f"{target} and resi {target_start}-{target_end}")
-                cmd.create(f"{target}_ecd", f"{target}_sele")
+                cmd.create(f"{target}_chain", f"{target}_sele")
 
-                mobile = f"{mobile}_ecd"
-                target = f"{target}_ecd"
+                mobile = f"{mobile}_chain"
+                target = f"{target}_chain"
         
                 result = cmd.align(f"polymer and name CA and {mobile}", f"polymer and name CA and {target}")
                 mobile_protein.set_ecd_rmsd(round(result[0], 2))
@@ -155,6 +155,7 @@ class Protein(ABC):
 
         annotations_dict = defaultdict(list)
         renamed = []
+
         for line in gff_text:
             if line.startswith("#"):
                 renamed.append(line)
@@ -171,6 +172,10 @@ class Protein(ABC):
                 parts[2] = "Cyto"
             elif feature_type == "TRANSMEM":
                 parts[2] = "TM"
+            elif "signal" in feature_type.lower():
+                parts[2] = "SIGNAL"
+            elif "chain" in feature_type.lower():
+                parts[2] = "CHAIN"
     
             annotations_dict[parts[2]].append((parts[3], parts[4]))
             renamed.append("\t".join(parts))
