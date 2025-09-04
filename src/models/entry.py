@@ -1,8 +1,7 @@
 from pptx import Presentation
-from pptx.util import Pt, Inches
+from pptx.util import Pt
 from pptx.dml.color import RGBColor
 from pathlib import Path
-from typing import List
 from models.protein_model.human_protein import HumanProtein
 from models.protein_model.ortholog import Ortholog
 from dataclasses import dataclass, field
@@ -10,9 +9,22 @@ from models.image import Img
 
 @dataclass
 class Entry:
+    """
+    Represents a protein passport entry (pptx).
+
+    Attributes:
+        template_path (str): Path of the template ppt.
+        human (HumanProtein): HumanProtein of this Entry.
+        orthologs (list): List of Orthologs of this Entry.
+        user_name (str): User's name.
+        powerpoint (Presentation): Presentation object of this Entry.
+        slides (Slides): Slides of this Entry's Presentation.
+        table_cells (list): List containing text to fill table cells of first slide in this Entry.
+        output_path (Path): Output path.
+    """
     template_path: str
     human: HumanProtein
-    orthologs: List[Ortholog]
+    orthologs: list
     user_name: str
     powerpoint: Presentation = field(init=False)
     slides: list = field(init=False)
@@ -20,45 +32,57 @@ class Entry:
     output_path: Path = field(init=False)
 
     def __post_init__(self):
+        """
+        Post init method for Entry. Sets powerpoint, slides, output_path, and table_cells fields.
+        """
         self.powerpoint = Presentation(self.template_path)
         self.slides = self.powerpoint.slides
         self.output_path = Path(__file__).parent.parent.parent / "output" / f"{self.human.name}_protein_passport.pptx"
-        self.table_cells = self._build_table_cells()
+        self._build_table_cells()
         self._set_footer()
 
-    # creates table cell info list
     def _build_table_cells(self):
-        return [
+        """
+        Sets table_cells field.
+        """
+        self.table_cells = [
             [
-                "Target Name: " + self.human.rec_name,
-                "Aliases: " + ", ".join(self.human.aliases),
+                "Target Name: " + self.human.passport_table_data["rec_name"],
+                "Aliases: " + ", ".join(self.human.passport_table_data["aliases"]),
                 f"(Gene id: {self.human.name}, UniProtKB - {self.human.id})"
             ],
-            [self.human.target_type],
+            [self.human.passport_table_data["target_type"]],
             ["interactions"],
             [
-                f"{self.human.length} aa {self.human.mass} kDa",
+                f"{self.human.passport_table_data['length']} aa {self.human.passport_table_data['mass']} kDa",
                 'self.human.nature_info'
             ],
-            [f"{o.organism.value}: {o.ecd_similarity}" for o in self.orthologs if o.ecd_similarity is not None],
+            [f"{o.organism.value[0]}: {o.ecd_similarity}" for o in self.orthologs if o.ecd_similarity is not None],
             [
-                f"Experimental PDBs: {', '.join(self.human.exp_pdbs)}",
+                f"Experimental PDBs: {', '.join(self.human.passport_table_data['exp_pdbs'])}",
                 f"Predicted: {self.human.pred_pdb_id}"
             ],
-            [f"{self.human.exp_pattern}."],
-            [f"{self.human.known_activity}."]
+            [f"{self.human.passport_table_data['exp_pattern']}."],
+            [f"{self.human.passport_table_data['known_activity']}."]
         ]
 
-    # writes name in footer
     def _set_footer(self):
+        """
+        Writes user's name to footer.
+        """
         for slide in self.slides:
             for shape in slide.shapes:
                 if 'Footer' in shape.name:
                     shape.text=self.user_name
                     break
 
-    # populates table in first slide
     def populate_info_table_slide(self, img: Img):
+        """
+        Populates the first slide of protein passport ppt template.
+
+        Args:
+            img (Img): Human protein 3d structure image.
+        """
         slide = self.slides[0]
 
         for shape in slide.shapes:
@@ -95,7 +119,14 @@ class Entry:
 
         self.powerpoint.save(self.output_path)
     
-    def populate_str_align_slide(self, align_imgs, seq_img: Img=None):
+    def populate_str_align_slide(self, align_imgs: list, seq_img: Img=None):
+        """
+        Populates the third slide of protein passport ppt template.
+
+        Args:
+            align_imgs (list): Structure align images.
+            seq_img (Img): Aligned sequence image.
+        """
         slide = self.slides[2]
         img_1 = align_imgs[0]
         img_2 = align_imgs[1]
@@ -148,7 +179,14 @@ class Entry:
 
         self.powerpoint.save(self.output_path)
     
-    def populate_string_db_slide(self, network_img, pred_partners_img=None):
+    def populate_string_db_slide(self, network_img: str, pred_partners_img=None):
+        """
+        Populates the fourth slide of protein passport ppt template.
+
+        Args:
+            network_img (str): path to STRING network image.
+            pred_partners_img (str): path to STRING predicted partners.
+        """
         slide = self.slides[3]
         placeholders = []
 

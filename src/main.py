@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
-from client.uniprot_kb_client import UniProtKBClient
 from client.uniprot_client import UniProtClient
+from client.proteins_client import ProteinsClient
 from client.alphafold_client import AlphaFoldClient
 from client.string_client import StringClient
 from models.protein_model.human_protein import HumanProtein
@@ -11,54 +11,68 @@ from models.organism import Organism
 from models.entry import Entry
 from models.image import Img
 
-def _uniprot_search(protein_name) -> dict:
-    uniprot_search_client = UniProtKBClient()
+def _uniprot_input(protein_name, protein_id) -> dict:
+    uniprot_data = {o: None for o in Organism}
 
-    uniprot_search_results = {}
+    uniprot_client = UniProtClient()
+    human_data =  uniprot_client.fetch(protein_id, kb=True)
+    uniprot_data[Organism.HUMAN] = human_data
+    uniref_data = uniprot_client.fetch(protein_id, ref=True)
+
+    orthologs = list(Organism)
+
+    for result in uniref_data['results']:
+        match = next((o for o in orthologs if result['organismTaxId'] == o.value[1]), None)
+
+        if match:
+            match_id = result['accessions'][0]
+            r = uniprot_client.fetch(protein_id=match_id, kb=True)
+            if r.get('results') and (match in uniprot_data):
+                uniprot_data[match] = r['results'][0]
     
     for organism in Organism:
-        r = uniprot_search_client.fetch(protein_id=protein_name, organism=organism.get_search_name())
-        if r['results']:
-            uniprot_search_results[organism] = r['results'][0]
+        r = uniprot_client.fetch(protein_id=protein_name, organism=organism.value[1], kb=True, search=True)
+        if r['results'] and uniprot_data[organism] == None:
+            uniprot_data[organism] = r['results'][0]
     
-    return uniprot_search_results
+    return uniprot_data
 
 def _get_annotations_text(protein_id) -> str:
-    annotations_client = UniProtClient()
+    annotations_client = ProteinsClient()
     return annotations_client.fetch(protein_id=protein_id)
 
 def _get_af_pdb(protein_id) -> dict:
     af_client = AlphaFoldClient()
     return af_client.fetch(protein_id=protein_id)
 
-def _create_proteins(protein_name) -> dict[Organism, Protein]:
-    uniprot_search_results = _uniprot_search(protein_name)
+def _create_proteins(protein_name, protein_id) -> dict[Organism, Protein]:
+    uniprot_data = _uniprot_input(protein_name, protein_id)
     
     proteins = {}
 
-    for organism, results in uniprot_search_results.items():
-        id=results['primaryAccession']
-        name=protein_name
-        seq=results['sequence']['value']
-        annotations_text = _get_annotations_text(results['primaryAccession'])
+    for organism, results in uniprot_data.items():
+        if results is not None:
+            id=results['primaryAccession']
+            name=protein_name
+            seq=results['sequence']['value']
+            annotations_text = _get_annotations_text(results['primaryAccession'])
 
-        af_pdb = _get_af_pdb(results['primaryAccession'])
-        pred_pdb = af_pdb['file_name']
-        pred_pdb_content = af_pdb['content']
+            af_pdb = _get_af_pdb(results['primaryAccession'])
+            pred_pdb = af_pdb['file_name']
+            pred_pdb_content = af_pdb['content']
 
-        if organism == Organism.HUMAN:
-            rec_name=results['proteinDescription']['recommendedName']['fullName']['value']
-            aliases=[item["fullName"]["value"] for item in results['proteinDescription']['alternativeNames']]
-            length=results['sequence']['length']
-            mass=round(results['sequence']['molWeight'] * 10**-3, 1)
-            target_type=results['comments'][1]['subcellularLocations'][0]['topology']['value']
-            exp_pdbs=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "PDB"]
-            known_activity=results['comments'][0]['texts'][0]['value']
-            exp_pattern=results['comments'][2]['texts'][0]['value']
-            string_id=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "STRING"]
+            if organism == Organism.HUMAN:
+                rec_name=results['proteinDescription']['recommendedName']['fullName']['value']
+                aliases=[item["fullName"]["value"] for item in results['proteinDescription']['alternativeNames']]
+                length=results['sequence']['length']
+                mass=round(results['sequence']['molWeight'] * 10**-3, 1)
+                target_type=results['comments'][1]['subcellularLocations'][0]['topology']['value']
+                exp_pdbs=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "PDB"]
+                known_activity=results['comments'][0]['texts'][0]['value']
+                exp_pattern=results['comments'][2]['texts'][0]['value']
+                string_id=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "STRING"]
 
-            protein = HumanProtein(id=id, 
-                          organism=organism, 
+                protein = HumanProtein(id=id, 
                           name=name, 
                           rec_name=rec_name,
                           aliases=aliases,
@@ -74,8 +88,8 @@ def _create_proteins(protein_name) -> dict[Organism, Protein]:
                           exp_pattern=exp_pattern,
                           string_id=string_id)
         
-        else:
-            protein = Ortholog(id=id, 
+            else:
+                protein = Ortholog(id=id, 
                           organism=organism, 
                           name=name, 
                           pred_pdb=pred_pdb,
@@ -84,7 +98,7 @@ def _create_proteins(protein_name) -> dict[Organism, Protein]:
                           annotations=annotations_text,
                           string_id=string_id)
         
-        proteins[organism] = protein
+            proteins[organism] = protein
     
     return proteins
 
@@ -93,19 +107,21 @@ def _get_string_db_interactions(protein_id):
     return string_client.fetch(protein_id)
     
 def main():
-    parser = argparse.ArgumentParser(description="Example Python CLI script")
+    parser = argparse.ArgumentParser(description="Protein passport automation")
 
-    parser.add_argument("protein_name", help="Path to input file")
+    parser.add_argument("protein_name", help="Name of protein")
+    parser.add_argument("protein_id", help="UnitProt ID of protein")
     parser.add_argument("first_name", help="Your first name")
     parser.add_argument("last_name", help="Your last name")
 
     args = parser.parse_args()
-    protein_name = args.protein_name.upper()
+    protein_name = args.protein_name
+    protein_id = args.protein_id
     first_name = args.first_name
     last_name = args.last_name
 
     print(f"Retrieving information for {protein_name}...")
-    proteins = _create_proteins(protein_name)
+    proteins = _create_proteins(protein_name, protein_id)
     human = proteins.get(Organism.HUMAN)
     orthologs = [protein for organism, protein in proteins.items() if organism != Organism.HUMAN]
 

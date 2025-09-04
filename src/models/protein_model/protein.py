@@ -5,23 +5,57 @@ from models.organism import Organism
 from pymol import cmd
 
 class Protein(ABC):
+    """
+    Represents an abstract Protein object with sequence and structure information.
+
+    Attributes:
+        id (str): UniProt ID.
+        organism (Organism): Organism of protein (human).
+        name (str): Name of protein.
+        string_id (str): STRING database ID.
+        file_name (Path): Path to this protein's directory.
+        seq (str): Path to .txt containing amino acid sequence.
+        annotations (dict): Protein annotations.
+        annotations_path (str): Path to .gff containing annotations.
+        pred_pdb (str): Path to predicted structure PDB.
+        pred_pdb_id (str): AlphaFold ID.
+        structure_file (str): Path to PDB file.
+    """
 
     def __init__(self, id: str, organism: Organism, name: str, seq: str, annotations: str, pred_pdb: str, pred_pdb_content, string_id: str):
+        """
+        Constructor for Protein.
+
+        Args:
+            id (str): UniProt ID.
+            organism (Organism): Organism of protein.
+            name (str): Name of protein.
+            seq (str): Path to .txt containing amino acid sequence.
+            annotations (str): Protein annotations.
+            pred_pdb (str): Path to predicted structure PDB.
+            pred_pdb_content: 3d coordinates of protein.
+            string_id (str): STRING database ID.
+        """
         self.id = id
         self.organism = organism
         self.name = name
         self.string_id = string_id
 
         project_root = Path(__file__).parent.parent.parent.parent
-        self.file_name = project_root / "output" / f"{self.organism.value.replace(' ', '_')}_{self.name}"
+        self.file_name = project_root / "output" / f"{self.organism.value[0].replace(' ', '_')}_{self.name}"
         self.file_name.mkdir(parents=True, exist_ok=True)
 
         self._set_save_seq(seq)
         self._set_save_annotations(annotations)
         self._set_save_af_pdb(pred_pdb, pred_pdb_content)
     
-    # colors 3d structure and saves snapshot
-    def annotate_3d_structure(self):
+    def annotate_3d_structure(self) -> str:
+        """
+        Annotates 3d structure of this Protein using Pymol and takes snapshot.
+
+        Returns:
+            str: Path to snapshot of annotated 3d structure.
+        """
         cmd.load(self.pred_pdb)
 
         for annotation, regions in self.annotations.items():
@@ -43,8 +77,16 @@ class Protein(ABC):
         cmd.delete("all")
         return str(png_path)
     
-    # structure align with this protein as target and return rmsd
-    def structure_align(self, mobile_proteins):
+    def structure_align(self, mobile_proteins) -> dict:
+        """
+        Aligns 3d structure of given proteins' ECDs against this Protein's ECD.
+
+        Args:
+            mobile_proteins (list): the mobile proteins to align.
+
+        Returns:
+            dict: calculated RMSDs after alignment.
+        """
         target_path = self.pred_pdb
         target = self.organism.name
 
@@ -91,14 +133,24 @@ class Protein(ABC):
         
         return rmsd_dict
 
-    # sets and saves seq .txt file
     def _set_save_seq(self, seq):
+        '''
+        Saves sequence to .txt file and sets seq field to the path of the file.
+
+        Args:
+            seq (str): Sequence.
+        '''
         seq_path = self.file_name / f"{self.organism.name}_{self.id}_seq.txt"
         seq_path.write_text(seq)
         self.seq = str(seq_path)
 
-    # sets annotation field and saves .gff file
     def _set_save_annotations(self, annotations):
+        '''
+        Saves annotations to .gff file and sets annotations_path and annotations field.
+
+        Args:
+            annotations (str): Annotations.
+        '''
         gff_text = annotations.splitlines()
 
         annotations_dict = defaultdict(list)
@@ -128,8 +180,14 @@ class Protein(ABC):
         self.annotations_path = str(gff_path)
         self.annotations = annotations_dict
 
-    # saves af .pdb
     def _set_save_af_pdb(self, pdb_name, pdb_content):
+        '''
+        Saves PDB content to PDB file and sets pred_pdb_id and pred_pdb field.
+
+        Args:
+            pdb_name (str): PDB file name.
+            pdb_content: 3d coordinates of protein.
+        '''
         pdb_path = self.file_name / pdb_name
         pdb_path.write_bytes(pdb_content)
         self.pred_pdb_id = pdb_name

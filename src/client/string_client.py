@@ -4,10 +4,24 @@ from time import sleep
 from pathlib import Path
 
 class StringClient(BaseClient):
-    BASE_URL = "https://string-db.org/api"
+    """
+    Represents STRING client.
 
+    Attributes:
+        BASE_URL (str): Base url.
+    """
+    BASE_URL = "https://string-db.org/api"
     
-    def fetch(self, string_id, **kwargs) -> dict:
+    def fetch(self, string_id, **kwargs) -> str:
+        """
+        Gets STRING network image file of given protein.
+
+        Args:
+            protein_id (str): Protein of interest.
+        
+        Returns:
+            str: Image file path.
+        """
         output_format = "image"
         method = "network"
         params = {

@@ -2,17 +2,68 @@ import requests, sys
 from client.base_client import BaseClient
 
 class UniProtClient(BaseClient):
-    BASE_URL = "https://www.ebi.ac.uk/proteins/api"
+    """
+    Represents UniProt client.
 
-    # returns UniProt data for given protein id
-    def fetch(self, protein_id, **kwargs):
-        url = f"{self.BASE_URL}/features/{protein_id}?categories=TOPOLOGY"
-        headers = { "Accept" : "text/x-gff"}
+    Attributes:
+        BASE_URL (str): Base url.
+    """
+    BASE_URL = "https://rest.uniprot.org"
 
-        r = requests.get(url, headers=headers)
+    def fetch(self, protein_id, **kwargs) -> dict:
+        """
+        Gets UniProt information.
 
+        Args:
+            protein_id (str): Protein of interest.
+        
+        Returns:
+            dict: Uniprot data.
+        """
+        if kwargs.get('kb'):
+            params = {
+                    "fields": [
+                        "accession",
+                        "protein_name",
+                        "organism_name",
+                        "sequence",
+                        "mass",
+                        "cc_subcellular_location",
+                        "xref_pdb",
+                        "cc_function",
+                        "cc_tissue_specificity",
+                        "xref_string"]
+                        }
+            headers = {
+                    "accept": "application/json"
+                    }
+        
+            if kwargs.get('search'):
+                params["query"] = f"{protein_id} AND taxonomy_id:{kwargs.get('organism')}"
+                path = "/search"
+            else:
+                path = "/" + protein_id
+
+            url = '/'.join([self.BASE_URL, "/uniprotkb", path])
+        
+        elif kwargs.get('ref'):
+            params = {
+                "id": f"UniRef50_{protein_id}",
+                "facetFilter": "member_id_type:uniprotkb_id",
+                "size": "500"
+                }
+            headers = {
+                "accept": "application/json"
+                }
+            
+            url = '/'.join([self.BASE_URL, "/uniref/%7Bid%7D/members"])
+        
+        r = requests.get(url, headers=headers, params=params)
+        
         if not r.ok:
             r.raise_for_status()
             sys.exit()
         
-        return r.text
+        data = r.json()
+        return data
+            

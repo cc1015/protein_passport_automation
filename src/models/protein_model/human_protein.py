@@ -3,35 +3,80 @@ from models.organism import Organism
 import subprocess
 
 class HumanProtein(Protein):
+    """
+    Represents a human protein with sequence and structure information.
 
-    def __init__(self, id: str, organism: Organism, name: str, seq: str, annotations: str, pred_pdb: str, 
+    Attributes:
+        id (str): UniProt ID.
+        organism (Organism): Organism of protein (human).
+        name (str): Name of protein.
+        string_id (str): STRING database ID.
+        file_name (Path): Path to this protein's directory.
+        seq (str): Path to .txt containing amino acid sequence.
+        annotations (dict): Protein annotations.
+        annotations_path (str): Path to .gff containing annotations.
+        pred_pdb (str): Path to predicted structure PDB.
+        pred_pdb_id (str): AlphaFold ID.
+        structure_file (str): Path to PDB file.
+        passport_table_data (dict): Data to fill the info table for protein passport.
+    """
+
+    def __init__(self, id: str, name: str, seq: str, annotations: str, pred_pdb: str, 
                  pred_pdb_content, length: int, mass: float, rec_name: str, target_type: str, 
                  known_activity: str, exp_pattern: str, string_id: str, aliases: list | None = None, exp_pdbs: list | None = None):
-        super().__init__(id=id, organism=organism, name=name, seq=seq, annotations=annotations, pred_pdb=pred_pdb, 
+        """
+        Constructor for HumanProtein.
+
+        Args:
+            id (str): UniProt ID.
+            name (str): Name of protein.
+            seq (str): Path to .txt containing amino acid sequence.
+            annotations (str): Protein annotations.
+            pred_pdb (str): Path to predicted structure PDB.
+            pred_pdb_content: 3d coordinates of protein.
+            length (int): Length of protein (#aa).
+            mass (float): Mass of protein (kDa).
+            rec_name (str): Recommended name.
+            target_type (str): Protein target type.
+            known_activity (str): Known activity of protein.
+            exp_pattern (str): Expression pattern of protein.
+            string_id (str): STRING database ID.
+            aliases (list): Aliases for protein.
+            exp_pdbs (list): Experimental PDBs.
+        """
+        super().__init__(id=id, organism=Organism.HUMAN, name=name, seq=seq, annotations=annotations, pred_pdb=pred_pdb, 
                          pred_pdb_content=pred_pdb_content, string_id=string_id)
-        self.length = length
-        self.mass = mass
-        self.rec_name = rec_name
-        self.target_type = target_type
-        self.aliases = aliases
-        self.exp_pdbs = exp_pdbs
-        self.known_activity = known_activity
-        self.exp_pattern = exp_pattern
+        self.passport_table_data = {
+            "rec_name": rec_name,
+            "aliases": aliases,
+            "gene_id": name,
+            "length": length,
+            "mass": mass,
+            "target_type": target_type,
+            "exp_pdbs": exp_pdbs,
+            "known_activity": known_activity,
+            "exp_pattern": exp_pattern
+        }
     
-    # uses geneious prime to annotate and muscle align this protein's sequence with given, saves to .geneious file
-    def annotate_align_seq_geneious(self, proteins):
+    def annotate_align_seq_geneious(self, proteins: list):
+        """
+        Annotates and aligns the given proteins against this HumanProtein using GeneiousPrime. 
+        Creates output .geneious files containing annotations and alignment.
+
+        Args:
+            proteins (list): Proteins to be annotated and aligned against this HumanProtein.
+        """
         output_file = self.file_name / "output.geneious"
 
         annotate_command = ["geneious", "-i", self.seq, self.annotations_path, "-o", str(output_file)]
-        result = subprocess.run(annotate_command, capture_output=True, text=True)
+        subprocess.run(annotate_command, capture_output=True, text=True)
 
         protein_seq_paths = [p.file_name / f"{p.id}_seq.txt" for p in proteins]
 
         align_command = ["geneious", "-i", str(output_file), 
                          *map(str, protein_seq_paths), "-o", str(output_file),
                          "--operation", "muscle_alignment"]
-        result = subprocess.run(align_command, capture_output=True, text=True)
-        return result.stdout, result.stderr
+        subprocess.run(align_command, capture_output=True, text=True)
 
         
 
