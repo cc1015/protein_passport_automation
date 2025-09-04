@@ -1,4 +1,5 @@
-import requests, sys
+import requests, sys, urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from client.base_client import BaseClient
 
 class UniProtClient(BaseClient):
@@ -32,7 +33,8 @@ class UniProtClient(BaseClient):
                         "xref_pdb",
                         "cc_function",
                         "cc_tissue_specificity",
-                        "xref_string"]
+                        "xref_string",
+                        "gene_names"]
                         }
             headers = {
                     "accept": "application/json"
@@ -58,7 +60,7 @@ class UniProtClient(BaseClient):
             
             url = '/'.join([self.BASE_URL, "/uniref/%7Bid%7D/members"])
         
-        r = requests.get(url, headers=headers, params=params)
+        r = requests.get(url, headers=headers, params=params, verify=False)
         
         if not r.ok:
             r.raise_for_status()

@@ -95,41 +95,41 @@ class Protein(ABC):
         rmsd_dict = {}
 
         for mobile_protein in mobile_proteins:
-            if ((mp_ecd := mobile_protein.annotations.get('CHAIN')) 
-                and len(mp_ecd) == 1
-                and (self_ecd := self.annotations.get('CHAIN')) 
-                and len(self_ecd) == 1):
-                mobile_path = mobile_protein.pred_pdb
-                mobile = mobile_protein.organism.name
-                cmd.load(mobile_path, mobile)
+            mobile_path = mobile_protein.pred_pdb
+            mobile = mobile_protein.organism.name
+            cmd.load(mobile_path, mobile)
 
+            if ((mp_ecd := mobile_protein.annotations.get('CHAIN')) 
+                and len(mp_ecd) == 1):
                 (mobile_start, mobile_end) = mobile_protein.annotations.get('CHAIN')[0]
                 (target_start, target_end) = self.annotations.get('CHAIN')[0]
+            else:
+                (mobile_start, mobile_end) = (target_start, target_end)
 
-                cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
-                cmd.create(f"{mobile}_chain", f"{mobile}_sele")
+            cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
+            cmd.create(f"{mobile}_chain", f"{mobile}_sele")
 
-                cmd.select(f"{target}_sele", f"{target} and resi {target_start}-{target_end}")
-                cmd.create(f"{target}_chain", f"{target}_sele")
+            cmd.select(f"{target}_sele", f"{target} and resi {target_start}-{target_end}")
+            cmd.create(f"{target}_chain", f"{target}_sele")
 
-                mobile = f"{mobile}_chain"
-                target = f"{target}_chain"
+            mobile = f"{mobile}_chain"
+            target = f"{target}_chain"
         
-                result = cmd.align(f"polymer and name CA and {mobile}", f"polymer and name CA and {target}")
-                mobile_protein.set_ecd_rmsd(round(result[0], 2))
+            result = cmd.align(f"polymer and name CA and {mobile}", f"polymer and name CA and {target}")
+            mobile_protein.set_ecd_rmsd(round(result[0], 2))
 
-                cmd.disable("all")
-                cmd.enable(mobile)
-                cmd.enable(target)
-                cmd.color("green", target)
+            cmd.disable("all")
+            cmd.enable(mobile)
+            cmd.enable(target)
+            cmd.color("green", target)
 
-                png_path = mobile_protein.file_name / f"{mobile}_human_aligned_ss.png"
-                pse_path = mobile_protein.file_name / f"{mobile}_human_aligned_structure.pse"
-                cmd.png(str(png_path), width=2000, ray=1)
-                cmd.save(str(pse_path))
-                cmd.delete(f"{mobile}*")
+            png_path = mobile_protein.file_name / f"{mobile}_human_aligned_ss.png"
+            pse_path = mobile_protein.file_name / f"{mobile}_human_aligned_structure.pse"
+            cmd.png(str(png_path), width=2000, ray=1)
+            cmd.save(str(pse_path))
+            cmd.delete(f"{mobile}*")
 
-                rmsd_dict[mobile_protein] = (str(png_path), round(result[0], 2))
+            rmsd_dict[mobile_protein] = (str(png_path), round(result[0], 2))
         
         return rmsd_dict
 

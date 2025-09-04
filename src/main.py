@@ -18,6 +18,8 @@ def _uniprot_input(protein_name, protein_id) -> dict:
     human_data =  uniprot_client.fetch(protein_id, kb=True)
     uniprot_data[Organism.HUMAN] = human_data
     uniref_data = uniprot_client.fetch(protein_id, ref=True)
+    
+    protein_name = human_data['genes'][0]['geneName']['value']
 
     orthologs = list(Organism)
 
@@ -27,15 +29,14 @@ def _uniprot_input(protein_name, protein_id) -> dict:
         if match:
             match_id = result['accessions'][0]
             r = uniprot_client.fetch(protein_id=match_id, kb=True)
-            if r.get('results') and (match in uniprot_data):
-                uniprot_data[match] = r['results'][0]
+            if r and (match in uniprot_data):
+                uniprot_data[match] = r
                 orthologs.remove(match)
-    
+
     for organism in orthologs:
         r = uniprot_client.fetch(protein_id=protein_name, organism=organism.value[1], kb=True, search=True)
         if r['results'] and uniprot_data[organism] == None:
             uniprot_data[organism] = r['results'][0]
-    
     return uniprot_data
 
 def _get_annotations_text(protein_id) -> str:
@@ -134,6 +135,7 @@ def main():
     slide_1_img = Img(annotated_img_path, caption=human.pred_pdb_id)
 
     rmsd_map = human.structure_align(orthologs)
+    import pdb; pdb.set_trace();
     top_two = sorted(rmsd_map.items(), key=lambda x: x[1][1])[:2]
     slide_3_imgs = []
     for ortholog, (img_path, rmsd) in top_two:

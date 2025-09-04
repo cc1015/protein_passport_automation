@@ -1,4 +1,5 @@
-import requests, sys
+import requests, sys, urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from client.base_client import BaseClient
 
 class ProteinsClient(BaseClient):
@@ -23,7 +24,7 @@ class ProteinsClient(BaseClient):
         url = f"{self.BASE_URL}/features/{protein_id}?categories=MOLECULE_PROCESSING"
         headers = { "Accept" : "text/x-gff"}
 
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=headers, verify=False)
 
         if not r.ok:
             r.raise_for_status()

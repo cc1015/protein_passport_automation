@@ -1,4 +1,5 @@
-import requests, sys
+import requests, sys, urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from client.base_client import BaseClient
 from time import sleep
 from pathlib import Path
@@ -33,7 +34,7 @@ class StringClient(BaseClient):
             }
 
         url = "/".join([self.BASE_URL, output_format, method]) 
-        r = requests.post(url, data=params)
+        r = requests.post(url, data=params, verify=False)
 
         if not r.ok:
             r.raise_for_status()

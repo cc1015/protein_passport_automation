@@ -1,4 +1,5 @@
-import requests, sys
+import requests, sys, urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from client.base_client import BaseClient
 
 class AlphaFoldClient(BaseClient):
@@ -22,7 +23,7 @@ class AlphaFoldClient(BaseClient):
         """
         url = f"{self.BASE_URL}/api/prediction/{protein_id}"
             
-        r = requests.get(url)
+        r = requests.get(url, verify=False)
 
         if not r.ok:
             r.raise_for_status()
@@ -33,7 +34,7 @@ class AlphaFoldClient(BaseClient):
 
         pdb_file_name = pdb_url.rsplit("/",1)[-1]
 
-        pdb_r = requests.get(pdb_url)
+        pdb_r = requests.get(pdb_url, verify=False)
 
         return {'file_name': pdb_file_name,
                 'content': pdb_r.content}
