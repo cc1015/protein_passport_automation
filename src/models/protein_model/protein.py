@@ -2,6 +2,7 @@ from collections import defaultdict
 from pathlib import Path
 from abc import ABC
 from models.organism import Organism
+from models.annotation import Annotation
 from pymol import cmd
 
 class Protein(ABC):
@@ -58,16 +59,8 @@ class Protein(ABC):
         """
         cmd.load(self.pred_pdb)
 
-        for annotation, regions in self.annotations.items():
-            for start, end in regions:
-                if annotation == "ECD" or annotation == "CHAIN":
-                    color = "green"
-                elif annotation == "TM" or annotation == "SIGNAL":
-                    color = "red"
-                elif annotation == "Cyto":
-                    color = "magenta"
-
-                cmd.color(color, f"resi {start}-{end}")
+        for annotation, (start, end) in self.annotations.items():
+            cmd.color(annotation.color, f"resi {start}-{end}")
         
         cmd.orient()
         png_path = self.file_name / f"{self.name}_structure_ss.png"
@@ -91,7 +84,8 @@ class Protein(ABC):
         pse_path = self.file_name.parent / "alignments.pse"
         target_path = self.pred_pdb
         target = self.organism.name
-        (target_start, target_end) = self.annotations.get('CHAIN')[0]
+        import pdb; pdb.set_trace();
+        (target_start, target_end) = (self.annotations.get(Annotation.ECD) or self.annotations.get(Annotation.CHAIN))
 
         cmd.load(target_path, target)
 
@@ -107,11 +101,8 @@ class Protein(ABC):
             mobile = mobile_protein.organism.name
             cmd.load(mobile_path, mobile)
 
-            if ((mp_domain := mobile_protein.annotations.get('CHAIN')) 
-                and len(mp_domain) == 1):
-                (mobile_start, mobile_end) = mobile_protein.annotations.get('CHAIN')[0]
-            else:
-                (mobile_start, mobile_end) = (target_start, target_end)
+            import pdb; pdb.set_trace()
+            (mobile_start, mobile_end) = (mobile_protein.annotations.get(Annotation.ECD) or mobile_protein.annotations.get(Annotation.CHAIN) or (target_start, target_end))
 
             cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
             cmd.create(f"{mobile}_chain", f"{mobile}_sele")
@@ -154,7 +145,7 @@ class Protein(ABC):
         '''
         gff_text = annotations.splitlines()
 
-        annotations_dict = defaultdict(list)
+        annotations_dict = {}
         renamed = []
 
         for line in gff_text:
@@ -166,20 +157,13 @@ class Protein(ABC):
                 continue
             feature_type = parts[2]
             attributes = parts[8]
-
-            if "Extracellular" in attributes:
-                parts[2] = "ECD"
-            elif "Cytoplasmic" in attributes:
-                parts[2] = "Cyto"
-            elif feature_type == "TRANSMEM":
-                parts[2] = "TM"
-            elif "signal" in feature_type.lower():
-                parts[2] = "SIGNAL"
-            elif "chain" in feature_type.lower():
-                parts[2] = "CHAIN"
-    
-            annotations_dict[parts[2]].append((parts[3], parts[4]))
-            renamed.append("\t".join(parts))
+            
+            for annotation in Annotation:
+                if feature_type == annotation.feature and (annotation.attr is None or annotation.attr in attributes):
+                    parts[2] = annotation.name
+                    annotations_dict[annotation] = (parts[3], parts[4])
+                    renamed.append("\t".join(parts))
+                    break
         
         gff_path = self.file_name / f"{self.id}_annotations.gff"
         gff_path.write_text("\n".join(renamed))

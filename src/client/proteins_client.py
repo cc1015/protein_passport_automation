@@ -21,7 +21,7 @@ class ProteinsClient(BaseClient):
         Returns:
             str: Annotations.
         """
-        url = f"{self.BASE_URL}/features/{protein_id}?categories=MOLECULE_PROCESSING"
+        url = f"{self.BASE_URL}/features/{protein_id}?categories=TOPOLOGY"
         headers = { "Accept" : "text/x-gff"}
 
         r = requests.get(url, headers=headers, verify=False)
@@ -29,5 +29,14 @@ class ProteinsClient(BaseClient):
         if not r.ok:
             r.raise_for_status()
             sys.exit()
+        
+        if r.text.endswith("\n\n"):
+            url = f"{self.BASE_URL}/features/{protein_id}?categories=MOLECULE_PROCESSING"
+            headers = { "Accept" : "text/x-gff"}
+            r = requests.get(url, headers=headers, verify=False)
+            
+            if not r.ok:
+                r.raise_for_status()
+                sys.exit()
         
         return r.text
