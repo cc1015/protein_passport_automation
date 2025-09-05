@@ -88,10 +88,17 @@ class Protein(ABC):
         Returns:
             dict: calculated RMSDs after alignment.
         """
+        pse_path = self.file_name.parent / "alignments.pse"
         target_path = self.pred_pdb
         target = self.organism.name
+        (target_start, target_end) = self.annotations.get('CHAIN')[0]
 
         cmd.load(target_path, target)
+
+        cmd.select(f"{target}_sele", f"{target} and resi {target_start}-{target_end}")
+        cmd.create(f"{target}_chain", f"{target}_sele")
+        cmd.delete(f"{target}_sele")
+        cmd.delete(f"{target}")
 
         rmsd_dict = {}
 
@@ -103,32 +110,25 @@ class Protein(ABC):
             if ((mp_domain := mobile_protein.annotations.get('CHAIN')) 
                 and len(mp_domain) == 1):
                 (mobile_start, mobile_end) = mobile_protein.annotations.get('CHAIN')[0]
-                (target_start, target_end) = self.annotations.get('CHAIN')[0]
             else:
                 (mobile_start, mobile_end) = (target_start, target_end)
 
             cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
             cmd.create(f"{mobile}_chain", f"{mobile}_sele")
-
-            cmd.select(f"{target}_sele", f"{target} and resi {target_start}-{target_end}")
-            cmd.create(f"{target}_chain", f"{target}_sele")
-
-            mobile = f"{mobile}_chain"
-            target = f"{target}_chain"
+            cmd.delete(f"{mobile}_sele")
+            cmd.delete(f"{mobile}")
         
-            result = cmd.align(f"polymer and name CA and {mobile}", f"polymer and name CA and {target}")
+            result = cmd.align(f"polymer and name CA and {mobile}_chain", f"polymer and name CA and {target}_chain")
             mobile_protein.set_rmsd(round(result[0], 2))
+
+            png_path = mobile_protein.file_name / f"{mobile}_human_aligned_ss.png"
 
             cmd.disable("all")
             cmd.enable(mobile)
             cmd.enable(target)
             cmd.color("green", target)
-
-            png_path = mobile_protein.file_name / f"{mobile}_human_aligned_ss.png"
-            pse_path = mobile_protein.file_name / f"{mobile}_human_aligned_structure.pse"
             cmd.png(str(png_path), width=2000, ray=1)
             cmd.save(str(pse_path))
-            cmd.delete(f"{mobile}*")
 
             rmsd_dict[mobile_protein] = (str(png_path), round(result[0], 2))
         

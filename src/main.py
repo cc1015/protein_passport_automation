@@ -135,7 +135,6 @@ def main():
     slide_1_img = Img(annotated_img_path, caption=human.pred_pdb_id)
 
     rmsd_map = human.structure_align(orthologs)
-    import pdb; pdb.set_trace();
     top_two = sorted(rmsd_map.items(), key=lambda x: x[1][1])[:2]
     slide_3_imgs = []
     for ortholog, (img_path, rmsd) in top_two:
