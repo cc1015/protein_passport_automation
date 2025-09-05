@@ -84,7 +84,6 @@ class Protein(ABC):
         pse_path = self.file_name.parent / "alignments.pse"
         target_path = self.pred_pdb
         target = self.organism.name
-        import pdb; pdb.set_trace();
         (target_start, target_end) = (self.annotations.get(Annotation.ECD) or self.annotations.get(Annotation.CHAIN))
 
         cmd.load(target_path, target)
@@ -101,7 +100,6 @@ class Protein(ABC):
             mobile = mobile_protein.organism.name
             cmd.load(mobile_path, mobile)
 
-            import pdb; pdb.set_trace()
             (mobile_start, mobile_end) = (mobile_protein.annotations.get(Annotation.ECD) or mobile_protein.annotations.get(Annotation.CHAIN) or (target_start, target_end))
 
             cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")

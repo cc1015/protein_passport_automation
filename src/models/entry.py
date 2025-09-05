@@ -52,12 +52,12 @@ class Entry:
                 f"(Gene id: {self.human.name}, UniProtKB - {self.human.id})"
             ],
             [self.human.passport_table_data["target_type"]],
-            ["interactions"],
+            [""],
             [
                 f"{self.human.passport_table_data['length']} aa {self.human.passport_table_data['mass']} kDa",
-                'self.human.nature_info'
+                ""
             ],
-            [f"{o.organism.value[0]}: {o.similarity}" for o in self.orthologs if o.similarity is not None],
+            [f"{o.organism.value[0]}: %" for o in self.orthologs],
             [
                 f"Experimental PDBs: {', '.join(self.human.passport_table_data['exp_pdbs'])}",
                 f"Predicted: {self.human.pred_pdb_id}"
@@ -119,6 +119,19 @@ class Entry:
 
         self.powerpoint.save(self.output_path)
     
+    def populate_hu_seq_slide(self):
+        """
+        Populates the second slide of protein passport ppt template.
+        """
+        slide = self.slides[1]
+        for shape in slide.shapes:
+            if 'Title' in shape.name:
+                title = shape
+        
+        if title:
+            title.text = self.human.name + "Human Seq Annotated"
+
+    
     def populate_str_align_slide(self, align_imgs: list, seq_img: Img=None):
         """
         Populates the third slide of protein passport ppt template.
@@ -130,14 +143,16 @@ class Entry:
         slide = self.slides[2]
         img_1 = align_imgs[0]
         img_2 = align_imgs[1]
+        img_3 = align_imgs[2]
 
         #seq_img.horizontal()
         img_1.vertical()
         img_2.vertical()
+        img_3.vertical()
 
-        pictures = [img_1.path, img_2.path]
+        pictures = [img_1.path, img_2.path, img_3.path]
         placeholders = []
-        captions = [img_1.caption, img_2.caption]
+        captions = [img_1.caption, img_2.caption, img_3.caption]
         textboxes = []
 
         for shape in slide.shapes:
@@ -145,7 +160,7 @@ class Entry:
                 placeholders.append(shape)
             if 'Table' in shape.name:
                 table = shape.table
-            if 'TextBox' in shape.name and len(textboxes) < 2:
+            if 'TextBox' in shape.name and len(textboxes) < 3:
                 textboxes.append(shape)
         
         zipped = zip(placeholders[1:], pictures)
@@ -164,7 +179,7 @@ class Entry:
             cell.text = self.human.id
             cell.text_frame.paragraphs[0].runs[0].font.size = Pt(14)
 
-            for i, ortholog in enumerate(self.orthologs, start=1):
+            for i, ortholog in enumerate(self.orthologs, start=2):
                 species_cell = table.cell(i, 0)
                 species_cell.text = ortholog.organism.name.capitalize()
                 species_cell.text_frame.paragraphs[0].runs[0].font.size = Pt(14)
@@ -174,7 +189,7 @@ class Entry:
                 id_cell.text_frame.paragraphs[0].runs[0].font.size = Pt(14)
 
                 similarity_cell = table.cell(i, 2)
-                similarity_cell.text = str(ortholog.similarity) + "%"
+                similarity_cell.text = "%"
                 similarity_cell.text_frame.paragraphs[0].runs[0].font.size = Pt(14)
 
         self.powerpoint.save(self.output_path)

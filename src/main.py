@@ -68,7 +68,8 @@ def _create_proteins(protein_name, protein_id) -> dict[Organism, Protein]:
                 aliases=[item["fullName"]["value"] for item in results['proteinDescription']['alternativeNames']]
                 length=results['sequence']['length']
                 mass=round(results['sequence']['molWeight'] * 10**-3, 1)
-                target_type="NA"#results['comments'][1]['subcellularLocations'][0]['topology']['value']
+                topology=results['comments'][1]['subcellularLocations'][0].get('topology')
+                target_type=topology.get('value') if topology else ""
                 exp_pdbs=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "PDB"]
                 known_activity=results['comments'][0]['texts'][0]['value']
                 exp_pattern=results['comments'][2]['texts'][0]['value']
@@ -135,10 +136,10 @@ def main():
     slide_1_img = Img(annotated_img_path, caption=human.pred_pdb_id)
 
     rmsd_map = human.structure_align(orthologs)
-    top_two = sorted(rmsd_map.items(), key=lambda x: x[1][1])[:2]
     slide_3_imgs = []
-    for ortholog, (img_path, rmsd) in top_two:
+    for ortholog, (img_path, rmsd) in rmsd_map.items():
         slide_3_imgs.append(Img(img_path, caption="Human:" + ortholog.organism.name.capitalize() + "\nRMSD: " + str(rmsd) + "Å"))
+    
     
     slide_4_img = _get_string_db_interactions(human.string_id)
 
