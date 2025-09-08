@@ -1,4 +1,5 @@
 import argparse
+import csv
 from pathlib import Path
 from client.uniprot_client import UniProtClient
 from client.proteins_client import ProteinsClient
@@ -65,14 +66,14 @@ def _create_proteins(protein_name, protein_id) -> dict[Organism, Protein]:
 
             if organism == Organism.HUMAN:
                 rec_name=results['proteinDescription']['recommendedName']['fullName']['value']
-                aliases=[item["fullName"]["value"] for item in results['proteinDescription']['alternativeNames']]
+                aliases = [item["fullName"]["value"] for item in results.get("proteinDescription", {}).get("alternativeNames", [])] or ""
                 length=results['sequence']['length']
                 mass=round(results['sequence']['molWeight'] * 10**-3, 1)
                 topology=results['comments'][1]['subcellularLocations'][0].get('topology')
                 target_type=topology.get('value') if topology else ""
                 exp_pdbs=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "PDB"]
                 known_activity=results['comments'][0]['texts'][0]['value']
-                exp_pattern=results['comments'][2]['texts'][0]['value']
+                exp_pattern = (results.get("comments", [])[2]["texts"][0]["value"] if len(results.get("comments", [])) > 2 else "")
                 string_id=[entry["id"] for entry in results['uniProtKBCrossReferences'] if entry["database"] == "STRING"]
 
                 protein = HumanProtein(id=id, 
@@ -105,24 +106,11 @@ def _create_proteins(protein_name, protein_id) -> dict[Organism, Protein]:
     
     return proteins
 
-def _get_string_db_interactions(protein_id):
+def _get_string_db_interactions(protein_name, string_id):
     string_client = StringClient()
-    return string_client.fetch(protein_id)
-    
-def main():
-    parser = argparse.ArgumentParser(description="Protein passport automation")
+    return string_client.fetch(protein_name, string_id)
 
-    parser.add_argument("protein_name", help="Name of protein")
-    parser.add_argument("protein_id", help="UnitProt ID of protein")
-    parser.add_argument("first_name", help="Your first name")
-    parser.add_argument("last_name", help="Your last name")
-
-    args = parser.parse_args()
-    protein_name = args.protein_name
-    protein_id = args.protein_id
-    first_name = args.first_name
-    last_name = args.last_name
-
+def _run(protein_id, protein_name, first_name, last_name):
     print(f"Retrieving information for {protein_name}...")
     proteins = _create_proteins(protein_name, protein_id)
     human = proteins.get(Organism.HUMAN)
@@ -141,7 +129,7 @@ def main():
         slide_3_imgs.append(Img(img_path, caption="Human:" + ortholog.organism.name.capitalize() + "\nRMSD: " + str(rmsd) + "Å"))
     
     
-    slide_4_img = _get_string_db_interactions(human.string_id)
+    slide_4_img = _get_string_db_interactions(protein_name, human.string_id)
 
     print("Creating powerpoint...")
     template_path = Path(__file__).parent.parent / "assets" / "template.pptx"
@@ -151,6 +139,45 @@ def main():
     entry.populate_string_db_slide(slide_4_img)
 
     print("Completed")
+    
+def main():
+    parser = argparse.ArgumentParser(description="Protein passport automation")
+    
+    parser.add_argument("first_name", help="Your first name")
+    parser.add_argument("last_name", help="Your last name")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    group.add_argument(
+        "--csv",
+        help="Path to CSV file with columns: protein_name, protein_id"
+    )
+
+    group.add_argument(
+        "--manual",
+        nargs=2,
+        metavar=("protein_name", "protein_id"),
+        help="Provide protein_name and protein_id directly"
+    )
+
+    args = parser.parse_args()
+
+    proteins = []
+
+    if args.csv:
+        with open(args.csv, newline="") as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                if len(row) >= 2:  
+                    proteins.append((row[0].strip(), row[1].strip()))
+    elif args.manual:
+        protein_name, protein_id = args.manual
+        proteins.append((protein_id, protein_name))
+
+    import pdb; pdb.set_trace();
+
+    for protein_name, protein_id in proteins:
+        _run(protein_id, protein_name, args.first_name, args.last_name)
     
 
 if __name__ == "__main__":

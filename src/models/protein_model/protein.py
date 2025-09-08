@@ -43,7 +43,7 @@ class Protein(ABC):
         self.string_id = string_id
 
         project_root = Path(__file__).parent.parent.parent.parent
-        self.file_name = project_root / "output" / f"{self.organism.name.lower()}_{self.name}"
+        self.file_name = project_root / f"output_{name}" / f"{self.organism.name.lower()}_{self.name}"
         self.file_name.mkdir(parents=True, exist_ok=True)
 
         self._set_save_seq(seq)
@@ -116,7 +116,8 @@ class Protein(ABC):
             cmd.enable(mobile)
             cmd.enable(target)
             cmd.color("green", target)
-            cmd.png(str(png_path), width=2000, ray=1)
+            cmd.zoom()
+            cmd.png(str(png_path), width=3000, ray=1)
             cmd.save(str(pse_path))
 
             rmsd_dict[mobile_protein] = (str(png_path), round(result[0], 2))

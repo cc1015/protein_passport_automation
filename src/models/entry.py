@@ -37,7 +37,7 @@ class Entry:
         """
         self.powerpoint = Presentation(self.template_path)
         self.slides = self.powerpoint.slides
-        self.output_path = Path(__file__).parent.parent.parent / "output" / f"{self.human.name}_protein_passport.pptx"
+        self.output_path = Path(__file__).parent.parent.parent / f"output_{self.human.name}" / f"{self.human.name}_protein_passport.pptx"
         self._build_table_cells()
         self._set_footer()
 

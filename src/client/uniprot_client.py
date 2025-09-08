@@ -42,11 +42,11 @@ class UniProtClient(BaseClient):
         
             if kwargs.get('search'):
                 params["query"] = f"{protein_id} AND taxonomy_id:{kwargs.get('organism')}"
-                path = "/search"
+                path = "search"
             else:
-                path = "/" + protein_id
+                path = protein_id
 
-            url = '/'.join([self.BASE_URL, "/uniprotkb", path])
+            url = '/'.join([self.BASE_URL, "uniprotkb", path])
         
         elif kwargs.get('ref'):
             params = {
@@ -58,7 +58,7 @@ class UniProtClient(BaseClient):
                 "accept": "application/json"
                 }
             
-            url = '/'.join([self.BASE_URL, "/uniref/%7Bid%7D/members"])
+            url = '/'.join([self.BASE_URL, "uniref/%7Bid%7D/members"])
         
         r = requests.get(url, headers=headers, params=params, verify=False)
         

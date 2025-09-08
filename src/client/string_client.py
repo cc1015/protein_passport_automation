@@ -13,7 +13,7 @@ class StringClient(BaseClient):
     """
     BASE_URL = "https://string-db.org/api"
     
-    def fetch(self, string_id, **kwargs) -> str:
+    def fetch(self, protein_name, **kwargs) -> str:
         """
         Gets STRING network image file of given protein.
 
@@ -26,7 +26,7 @@ class StringClient(BaseClient):
         output_format = "image"
         method = "network"
         params = {
-            "identifiers" : string_id, 
+            "identifiers" : kwargs.get('string_id'), 
             "species" : 9606, 
             "network_flavor": "confidence",
             "network_type": "physical",
@@ -40,11 +40,10 @@ class StringClient(BaseClient):
             r.raise_for_status()
             sys.exit()
 
-        project_root = Path(__file__).parent.parent.parent
-        output_dir = project_root / "output"
+        output_dir = Path(__file__).parent.parent.parent
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        file_name = output_dir / "string_network.png"
+        file_name = output_dir / f"output_{protein_name}" / "string_network.png"
 
         with open(file_name, 'wb') as fh:
             fh.write(r.content)
