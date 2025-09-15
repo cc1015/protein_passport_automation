@@ -26,8 +26,7 @@ class AlphaFoldClient(BaseClient):
         r = requests.get(url, verify=False)
 
         if not r.ok:
-            r.raise_for_status()
-            sys.exit()
+            return {}
 
         response_dict = r.json()[0]
         pdb_url = response_dict['pdbUrl']

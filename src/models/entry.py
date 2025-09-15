@@ -141,18 +141,16 @@ class Entry:
             seq_img (Img): Aligned sequence image.
         """
         slide = self.slides[2]
-        img_1 = align_imgs[0]
-        img_2 = align_imgs[1]
-        img_3 = align_imgs[2]
 
         #seq_img.horizontal()
-        img_1.vertical()
-        img_2.vertical()
-        img_3.vertical()
-
-        pictures = [img_1.path, img_2.path, img_3.path]
+        
+        pictures = []
+        captions = []
+        for i in align_imgs:
+            pictures.append(i.path)
+            captions.append(i.caption)
+            
         placeholders = []
-        captions = [img_1.caption, img_2.caption, img_3.caption]
         textboxes = []
 
         for shape in slide.shapes:
@@ -160,7 +158,7 @@ class Entry:
                 placeholders.append(shape)
             if 'Table' in shape.name:
                 table = shape.table
-            if 'TextBox' in shape.name and len(textboxes) < 3:
+            if 'TextBox' in shape.name and len(textboxes) < 4:
                 textboxes.append(shape)
         
         zipped = zip(placeholders[1:], pictures)
@@ -203,13 +201,8 @@ class Entry:
             pred_partners_img (str): path to STRING predicted partners.
         """
         slide = self.slides[3]
-        placeholders = []
-
-        for shape in slide.shapes:
-            if 'Picture' in shape.name:
-                placeholders.append(shape)
         
-        placeholders[0].insert_picture(network_img)
+        slide.shapes.add_picture(network_img, left=1, top=1)
         # placeholders[1].insert_picture(pred_partners_img)
 
         self.powerpoint.save(self.output_path)

@@ -15,15 +15,16 @@ class Protein(ABC):
         name (str): Name of protein.
         string_id (str): STRING database ID.
         file_name (Path): Path to this protein's directory.
-        seq (str): Path to .txt containing amino acid sequence.
+        seq (str): Path to .fasta containing amino acid sequence.
         annotations (dict): Protein annotations.
         annotations_path (str): Path to .gff containing annotations.
         pred_pdb (str): Path to predicted structure PDB.
         pred_pdb_id (str): AlphaFold ID.
         structure_file (str): Path to PDB file.
+        fasta (str): FASTA sequence.
     """
 
-    def __init__(self, id: str, organism: Organism, name: str, seq: str, annotations: str, pred_pdb: str, pred_pdb_content, string_id: str):
+    def __init__(self, id: str, organism: Organism, name: str, seq: str, annotations: str, pred_pdb: str, pred_pdb_content, string_id: str, fasta: str):
         """
         Constructor for Protein.
 
@@ -31,11 +32,12 @@ class Protein(ABC):
             id (str): UniProt ID.
             organism (Organism): Organism of protein.
             name (str): Name of protein.
-            seq (str): Path to .txt containing amino acid sequence.
+            seq (str): Path to .fasta containing amino acid sequence.
             annotations (str): Protein annotations.
             pred_pdb (str): Path to predicted structure PDB.
             pred_pdb_content: 3d coordinates of protein.
             string_id (str): STRING database ID.
+            fasta (str): FASTA sequence.
         """
         self.id = id
         self.organism = organism
@@ -46,7 +48,7 @@ class Protein(ABC):
         self.file_name = project_root / f"output_{name}" / f"{self.organism.name.lower()}_{self.name}"
         self.file_name.mkdir(parents=True, exist_ok=True)
 
-        self._set_save_seq(seq)
+        self._set_save_seq(fasta)
         self._set_save_annotations(annotations)
         self._set_save_af_pdb(pred_pdb, pred_pdb_content)
     
@@ -59,8 +61,9 @@ class Protein(ABC):
         """
         cmd.load(self.pred_pdb)
 
-        for annotation, (start, end) in self.annotations.items():
-            cmd.color(annotation.color, f"resi {start}-{end}")
+        for annotation, idxs in self.annotations.items():
+            for (start, end) in idxs:
+                cmd.color(annotation.color, f"resi {start}-{end}")
         
         cmd.orient()
         png_path = self.file_name / f"{self.name}_structure_ss.png"
@@ -84,7 +87,13 @@ class Protein(ABC):
         pse_path = self.file_name.parent / "alignments.pse"
         target_path = self.pred_pdb
         target = self.organism.name
-        (target_start, target_end) = (self.annotations.get(Annotation.ECD) or self.annotations.get(Annotation.CHAIN))
+        (target_start, target_end) = (1, self.passport_table_data['length'])
+            
+        if (self.annotations.get(Annotation.ECD) or self.annotations.get(Annotation.CHAIN)):
+            (target_start, target_end) = (self.passport_table_data['length'], 1)
+            for (start, end) in (self.annotations.get(Annotation.ECD) or self.annotations.get(Annotation.CHAIN)):
+                target_start = min(target_start, int(start))
+                target_end = max(target_end, int(end))
 
         cmd.load(target_path, target)
 
@@ -99,8 +108,14 @@ class Protein(ABC):
             mobile_path = mobile_protein.pred_pdb
             mobile = mobile_protein.organism.name
             cmd.load(mobile_path, mobile)
-
-            (mobile_start, mobile_end) = (mobile_protein.annotations.get(Annotation.ECD) or mobile_protein.annotations.get(Annotation.CHAIN) or (target_start, target_end))
+            
+            (mobile_start, mobile_end) = (target_start, target_end)
+            
+            if (mobile_protein.annotations.get(Annotation.ECD) or mobile_protein.annotations.get(Annotation.CHAIN)):
+                (mobile_start, mobile_end) = (float('-inf'), 0)
+                for (start, end) in (mobile_protein.annotations.get(Annotation.ECD) or mobile_protein.annotations.get(Annotation.CHAIN)):
+                    mobile_start = min(mobile_start, int(start))
+                    mobile_end = max(mobile_end, int(end))
 
             cmd.select(f"{mobile}_sele", f"{mobile} and resi {mobile_start}-{mobile_end}")
             cmd.create(f"{mobile}_chain", f"{mobile}_sele")
@@ -126,12 +141,12 @@ class Protein(ABC):
 
     def _set_save_seq(self, seq):
         '''
-        Saves sequence to .txt file and sets seq field to the path of the file.
+        Saves sequence to .fasta file and sets seq field to the path of the file.
 
         Args:
             seq (str): Sequence.
         '''
-        seq_path = self.file_name / f"{self.organism.name}_{self.id}_seq.txt"
+        seq_path = self.file_name / f"{self.organism.name}_{self.id}_seq.fasta"
         seq_path.write_text(seq)
         self.seq = str(seq_path)
 
@@ -144,7 +159,7 @@ class Protein(ABC):
         '''
         gff_text = annotations.splitlines()
 
-        annotations_dict = {}
+        annotations_dict = defaultdict(list)
         renamed = []
 
         for line in gff_text:
@@ -160,7 +175,7 @@ class Protein(ABC):
             for annotation in Annotation:
                 if feature_type == annotation.feature and (annotation.attr is None or annotation.attr in attributes):
                     parts[2] = annotation.name
-                    annotations_dict[annotation] = (parts[3], parts[4])
+                    annotations_dict[annotation].append((parts[3], parts[4]))
                     renamed.append("\t".join(parts))
                     break
         
